@@ -7,10 +7,16 @@ import {
 import { encPassword, verifyPassword } from "../utils/password.js";
 import jwttoken from "jsonwebtoken";
 import transporter from "../utils/nodemailer.js";
+import isExpired from "../utils/isExpired.js";
+import { json } from "express";
 
-//getUsers
-const getUsers = async (req, res) => {
-  return res.json({ msg: "all users data!" });
+//isAuthenticate
+const isAuth = async (req, res) => {
+  try {
+    return res.json({ success: true, message: "user authoized" });
+  } catch (error) {
+    return res.status(400).json({ success: false, message: error.message });
+  }
 };
 
 //signUp
@@ -25,7 +31,9 @@ const signUp = async (req, res) => {
 
   const existingUserQuery = await User.findOne({ email });
   if (existingUserQuery) {
-    return res.json({ success: false, message: "User already Exists" });
+    return res
+      .status(400)
+      .json({ success: false, message: "User already Exists" });
   }
 
   try {
@@ -52,8 +60,8 @@ const signUp = async (req, res) => {
       from: senderEmail,
       to: email,
       subject: "welcome to development mode Raza ",
-      text: `welcome to gulistaneraza website.your account is been created by ${email}`,
-      html: "<b>Hello world?</b>",
+      // text: `welcome to gulistaneraza website.your account is been created by ${email}`,
+      html: `<h3>welcome to gulistaneraza website.your account is been created by ${email}</h3>`,
     };
     await transporter.sendMail(emailOption);
 
@@ -76,7 +84,7 @@ const login = async (req, res) => {
   try {
     const userdata = await User.findOne({ email });
     if (!userdata) {
-      return res.json({ success: false, message: "Invalid email" });
+      return res.status(400).json({ success: false, message: "Invalid email" });
     }
 
     const isMatch = await verifyPassword(password, userdata.password);
@@ -107,6 +115,7 @@ const login = async (req, res) => {
   }
 };
 
+//logout
 const logout = async (req, res) => {
   try {
     res.clearCookie("token", {
@@ -120,4 +129,203 @@ const logout = async (req, res) => {
   }
 };
 
-export { getUsers, signUp, login, logout };
+//sendOtp
+const sendOtp = async (req, res) => {
+  const userId = req.userId;
+
+  try {
+    const userInfo = await User.findById(userId);
+
+    if (userInfo.isAccountVerify) {
+      return res
+        .status(400)
+        .json({ success: false, message: "account already verify!" });
+    }
+
+    const otp = Math.floor(1000 + Math.random() * 9000) + "";
+    userInfo.verifyOtp = otp;
+    userInfo.verifyOtpExpireAt = Date.now() + 24 * 60 * 60 * 1000;
+    await userInfo.save();
+
+    const emailOption = {
+      from: senderEmail,
+      to: userInfo.email,
+      subject: "Email Verification Code",
+      html: `
+        <div style="font-family: Arial, sans-serif; text-align: center;">
+          <h2>Welcome to GulistaneRaza Website</h2>
+          <p>Your OTP for verification is:</p>
+          <h1 style="color: #007bff;">${otp}</h1>
+          <p>This OTP is valid for 24hrs.</p>
+        </div>
+      `,
+    };
+
+    await transporter.sendMail(emailOption);
+
+    return res.json({ success: true, message: "otp sented to your email!" });
+  } catch (error) {
+    res.status(400).json({ success: false, message: error.message });
+  }
+};
+
+//verifyOtp
+const verifyOtp = async (req, res) => {
+  const { otp } = req.body;
+  const userId = req.userId;
+
+  if (!otp) {
+    return res.status(400).json({ success: false, message: "otp is required" });
+  }
+
+  try {
+    const userInfo = await User.findById(userId);
+
+    if (userInfo.isAccountVerify) {
+      return res
+        .status(400)
+        .json({ success: false, message: "already verifyed!" });
+    }
+
+    const isExpiredOtp = isExpired(userInfo.verifyOtpExpireAt);
+    if (isExpiredOtp) {
+      return res
+        .status(400)
+        .json({ success: false, message: "otp expired! genrate new otp" });
+    }
+
+    if (otp === userInfo.verifyOtp) {
+      userInfo.isAccountVerify = true;
+      userInfo.verifyOtp = "";
+      userInfo.verifyOtpExpireAt = 0;
+      await userInfo.save();
+
+      return res.json({
+        success: true,
+        message: "successfull verify your email",
+      });
+    } else {
+      return res.status(400).json({ success: false, message: "wrong otp!!" });
+    }
+  } catch (error) {
+    res.status(400).json({ success: false, message: error.message });
+  }
+};
+
+//sendresetPasswordOtp
+const resetPassword = async (req, res) => {
+  const { email } = req.body;
+
+  if (!email) {
+    res
+      .status(400)
+      .json({ success: false, message: "messing user email field" });
+  }
+
+  try {
+    const userInfo = await User.findOne({ email });
+
+    if (!userInfo) {
+      return res
+        .status(400)
+        .json({ success: false, message: "user doesn't exists" });
+    }
+
+    if (!userInfo.isAccountVerify) {
+      return res
+        .status(400)
+        .json({ success: false, message: "first verify your email!" });
+    }
+
+    const resetOtp = Math.floor(1000 + Math.random() * 9000) + "";
+    userInfo.resetOtp = resetOtp;
+    userInfo.verifyResetExpireAt = Date.now() + 15 * 60 * 1000;
+    userInfo.save();
+
+    const emailOption = {
+      from: senderEmail,
+      to: userInfo.email,
+      subject: "Email Reset Verification Code",
+      html: `
+        <div style="font-family: Arial, sans-serif; text-align: center;">
+          <h2>Welcome to GulistaneRaza Website</h2>
+          <p>Your RESET OTP for verification is:</p>
+          <h1 style="color: #007bff;">${resetOtp}</h1>
+          <p>This OTP is valid for 15mins.</p>
+        </div>
+      `,
+    };
+    await transporter.sendMail(emailOption);
+
+    return res.json({
+      success: true,
+      message: "sended your reset otp to your Email",
+      resetOtp,
+    });
+  } catch (error) {
+    return res.status(400).json({ success: false, message: error.message });
+  }
+};
+
+const verifyResetOtp = async (req, res) => {
+  const { email, resetOtp, newPassword } = req.body;
+
+  if (!resetOtp || !email || !newPassword) {
+    return res
+      .status(400)
+      .json({ success: false, message: "missing reset otp" });
+  }
+
+  try {
+    const userInfo = await User.findOne({ email });
+
+    if (!userInfo) {
+      return res
+        .status(400)
+        .json({ success: false, message: "user doesn't exists" });
+    }
+
+    if (!userInfo.isAccountVerify) {
+      return res
+        .status(400)
+        .json({ success: false, message: "first verify your email!" });
+    }
+
+    const expiredResetOtp = isExpired(userInfo.verifyResetExpireAt);
+    if (expiredResetOtp) {
+      return res
+        .status(400)
+        .json({ success: false, message: "your reset otp is expired!" });
+    }
+
+    if (resetOtp === userInfo.resetOtp) {
+      const hashPassword = await encPassword(newPassword);
+      userInfo.password = hashPassword;
+      userInfo.resetOtp = "";
+      userInfo.verifyResetExpireAt = 0;
+      userInfo.save();
+
+      return res.json({
+        success: true,
+        message: "your password is succesfuly updated",
+      });
+    } else {
+      return res
+        .status(400)
+        .json({ success: false, message: "wrong reset otp" });
+    }
+  } catch (error) {
+    return res.status(400).json({ success: false, message: error.message });
+  }
+};
+
+export {
+  isAuth,
+  signUp,
+  login,
+  logout,
+  sendOtp,
+  verifyOtp,
+  resetPassword,
+  verifyResetOtp,
+};

@@ -5,6 +5,7 @@ import connectDB from "./src/utils/connectDB.js";
 
 //router
 import auth from "./src/routes/auth.js";
+import client from "./src/routes/client.js";
 
 //middleware
 import cookieParser from "cookie-parser";
@@ -23,6 +24,7 @@ app.use(cookieParser());
 
 //router
 app.use("/auth", auth);
+app.use("/client", client);
 
 //server listen
 connectDB()

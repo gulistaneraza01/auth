@@ -11,17 +11,3 @@ const transporter = nodemailer.createTransport({
 });
 
 export default transporter;
-
-// async function main() {
-//   const info = await transporter.sendMail({
-//     from: '"Maddison Foo Koch 👻" <maddison53@ethereal.email>',
-//     to: "bar@example.com, baz@example.com",
-//     subject: "Hello ✔",
-//     text: "Hello world?",
-//     html: "<b>Hello world?</b>",
-//   });
-
-//   console.log("Message sent: %s", info.messageId);
-// }
-
-// main().catch(console.error);
