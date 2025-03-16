@@ -26,6 +26,19 @@ app.use(cookieParser());
 app.use("/auth", auth);
 app.use("/client", client);
 
+app.get("/", (req, res) => {
+  return res.json({
+    success: true,
+    message: "hello from server",
+  });
+});
+app.get("/product", (req, res) => {
+  return res.json({
+    success: true,
+    message: "product info",
+  });
+});
+
 //server listen
 connectDB()
   .then(() => {
