@@ -15,7 +15,11 @@ const authenticate = async (req, res, next) => {
   } catch (error) {
     return res
       .status(401)
-      .json({ success: false, message: "authentication is required" });
+      .json({
+        success: false,
+        message: "authentication is required",
+        error: error.message,
+      });
   }
 };
 

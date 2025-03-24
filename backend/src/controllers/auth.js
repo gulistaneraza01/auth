@@ -8,12 +8,23 @@ import { encPassword, verifyPassword } from "../utils/password.js";
 import jwttoken from "jsonwebtoken";
 import transporter from "../utils/nodemailer.js";
 import isExpired from "../utils/isExpired.js";
-import { json } from "express";
+import { EMAIL_VERIFY_TEMPLATE } from "../utils/emailTemplates.js";
 
 //isAuthenticate
 const isAuth = async (req, res) => {
   try {
     return res.json({ success: true, message: "user authoized" });
+  } catch (error) {
+    return res.status(400).json({ success: false, message: error.message });
+  }
+};
+
+//profile
+const profile = async (req, res) => {
+  const userId = req.userId;
+  try {
+    const userInfo = await User.findById(userId);
+    return res.json({ success: true, user: userInfo });
   } catch (error) {
     return res.status(400).json({ success: false, message: error.message });
   }
@@ -65,7 +76,11 @@ const signUp = async (req, res) => {
     };
     await transporter.sendMail(emailOption);
 
-    return res.status(201).json({ success: true, message: "user created" });
+    return res.status(201).json({
+      success: true,
+      message: "user created",
+      user: { id: userObject._id, email: userObject.email },
+    });
   } catch (error) {
     return res.status(400).json({ success: false, message: error.message });
   }
@@ -104,6 +119,7 @@ const login = async (req, res) => {
       return res.status(200).json({
         success: true,
         message: "successful user login",
+        user: { id: userObj._id, email: userObj.email },
       });
     } else {
       return res
@@ -151,14 +167,10 @@ const sendOtp = async (req, res) => {
       from: senderEmail,
       to: userInfo.email,
       subject: "Email Verification Code",
-      html: `
-        <div style="font-family: Arial, sans-serif; text-align: center;">
-          <h2>Welcome to GulistaneRaza Website</h2>
-          <p>Your OTP for verification is:</p>
-          <h1 style="color: #007bff;">${otp}</h1>
-          <p>This OTP is valid for 24hrs.</p>
-        </div>
-      `,
+      html: `${EMAIL_VERIFY_TEMPLATE.replace("{{otp}}", otp).replace(
+        "{{email}}",
+        userInfo.email
+      )}`,
     };
 
     await transporter.sendMail(emailOption);
@@ -247,12 +259,7 @@ const resetPassword = async (req, res) => {
       to: userInfo.email,
       subject: "Email Reset Verification Code",
       html: `
-        <div style="font-family: Arial, sans-serif; text-align: center;">
-          <h2>Welcome to GulistaneRaza Website</h2>
-          <p>Your RESET OTP for verification is:</p>
-          <h1 style="color: #007bff;">${resetOtp}</h1>
-          <p>This OTP is valid for 15mins.</p>
-        </div>
+        ${PASSWORD_RESET_TEMPLATE.replace("{{otp}}", resetOtp)}
       `,
     };
     await transporter.sendMail(emailOption);
@@ -267,6 +274,7 @@ const resetPassword = async (req, res) => {
   }
 };
 
+//verifyResetOtp
 const verifyResetOtp = async (req, res) => {
   const { email, resetOtp, newPassword } = req.body;
 
@@ -321,6 +329,7 @@ const verifyResetOtp = async (req, res) => {
 
 export {
   isAuth,
+  profile,
   signUp,
   login,
   logout,

@@ -5,11 +5,13 @@ import connectDB from "./src/utils/connectDB.js";
 
 //router
 import auth from "./src/routes/auth.js";
-import client from "./src/routes/client.js";
 
 //middleware
 import cookieParser from "cookie-parser";
 import cors from "cors";
+
+//utils
+import { incomeUrl } from "./src/utils/constaints.js";
 
 const app = express();
 
@@ -17,27 +19,13 @@ const app = express();
 const port = process.env.PORT || 8000;
 
 //middleware
-app.use(cors({ credentials: true }));
+app.use(cors({ origin: incomeUrl, credentials: true }));
 app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+app.use(express.urlencoded({ extended: false }));
 app.use(cookieParser());
 
 //router
 app.use("/auth", auth);
-app.use("/client", client);
-
-app.get("/", (req, res) => {
-  return res.json({
-    success: true,
-    message: "hello from server",
-  });
-});
-app.get("/product", (req, res) => {
-  return res.json({
-    success: true,
-    message: "product info",
-  });
-});
 
 //server listen
 connectDB()

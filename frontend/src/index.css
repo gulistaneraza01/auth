@@ -1,1 +1,21 @@
+@import url("https://fonts.googleapis.com/css2?family=Outfit:wght@100..900&display=swap");
 @import "tailwindcss";
+
+body {
+  font-family: "Outfit", sans-serif;
+}
+
+.active {
+  border-bottom: 2px solid tomato;
+}
+
+.no-spinners {
+  -moz-appearance: textfield; /* Firefox */
+  appearance: textfield; /* Other modern browsers */
+}
+
+.no-spinners::-webkit-inner-spin-button,
+.no-spinners::-webkit-outer-spin-button {
+  -webkit-appearance: none; /* WebKit browsers (Chrome, Safari) */
+  margin: 0;
+}

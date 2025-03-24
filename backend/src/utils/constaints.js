@@ -7,6 +7,7 @@ const isProduction = process.env.NODE_ENV === "production";
 const smtpUserName = process.env.SMTP_USERNAME;
 const smtpPassword = process.env.SMTP_PASSWORD;
 const senderEmail = process.env.SENDER_EMAIL;
+const incomeUrl = process.env.INCOMING_URL;
 
 export {
   mongodbURI,
@@ -15,4 +16,5 @@ export {
   smtpUserName,
   smtpPassword,
   senderEmail,
+  incomeUrl,
 };
