@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthProvider";
+import { toast } from "react-toastify";
 
 function Login() {
   const { signup, login } = useAuth();
@@ -11,8 +12,9 @@ function Login() {
     username: "",
     email: "",
     password: "",
+    confirmPassword: "",
   });
-  const { username, email, password } = formData;
+  const { username, email, password, confirmPassword } = formData;
   function handleInput(e) {
     setFormData((prev) => {
       return { ...prev, [e.target.name]: e.target.value };
@@ -22,7 +24,12 @@ function Login() {
   async function handlesubmit(e) {
     e.preventDefault();
     if (state === "signup") {
-      signup(formData);
+      if (password !== confirmPassword) {
+        toast.error("password is not same");
+        return;
+      }
+      const credential = { username, email, password };
+      signup(credential);
       navigate("/");
     } else {
       const extra = await login({ email, password });
@@ -95,6 +102,22 @@ function Login() {
               className="p-2 w-full outline-none text-gray-500"
             />
           </div>
+          {state === "signup" && (
+            <div className="border-2 border-black rounded-sm my-3">
+              <input
+                type="password"
+                name="confirmPassword"
+                id="confirmPassword"
+                value={confirmPassword}
+                onChange={handleInput}
+                placeholder="Confirm Password"
+                autoComplete="off"
+                required
+                className="p-2 w-full outline-none text-gray-500"
+              />
+            </div>
+          )}
+
           <Link to="/resetpassword" className="block text-start">
             Forgot password?
           </Link>
