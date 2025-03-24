@@ -51,7 +51,6 @@ function AuthProvider({ children }) {
 
   const login = async (credential) => {
     dispatch({ type: "AUTH_LOADING" });
-
     try {
       const res = await axios.post(apiRoutes.loginUrl, credential, {
         withCredentials: true,
